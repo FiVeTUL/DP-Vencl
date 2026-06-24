@@ -1,26 +1,4 @@
 \documentclass[FZS,DP]{tulthesis}
-% tento dokument používá balíky specifické pro XeLaTeX a lze jej přeložit
-% jen XeLaTeXem, nemáte-li instalována použitá (komerční) písma, změňte
-% nebo vymažte příkazy \set...font na následujících řádcích
-
-% Autor šablony: Pavel Satrapa: http://www.nti.tul.cz/~satrapa/vyuka/latex-tul/
-
-% Autor komentářů, jejich překladů do EN, nastavení BibLaTeXu a aplikace ČSN ISO 690: Jan Koprnický
-% http://www.fm.tul.cz/personal/jan.koprnicky
-
-% ENGLISH EXPLANATION
-% \documentclass[FM,Dis,EN,fonts,bw,twoside]{tulthesis} % black and white typing, dissertation thesis at FM, written in English with using of TUL Mono font, text is prepared to print on two sides of the paper
-% this document uses packages specific for XeLaTeX and it is possible to 
-% compile it by XeLaTeX only, if you haven't installed used (commercial) fonts
-% change them or erase commands \set...font in following rows
-% settings: FM (faculty: FS, FT, FP, EF, FA, FM, FZS a CXI), Dis (type of thesis: BP, DP, Teze, Autoref, Hab, SP, Proj), EN (written in English language), fonts (activation of TUL fonts), bw (black and white)
-
-% Autor of the template tulthesis: Pavel Satrapa: http://www.nti.tul.cz/~satrapa/vyuka/latex-tul/
-
-% Autor of several comments and their translation into English, BibLaTeX settings and CSN ISO 960 citation standard setting: Jan Koprnický
-% http://www.fm.tul.cz/personal/jan.koprnicky
-
-% poslední změna / last modification viz/see 00README-JK.txt
 
 \newcommand{\verze}{2.0}
 
@@ -33,6 +11,12 @@
 
 \usepackage{xunicode}
 \usepackage{xltxtra}
+
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{float}
+\usetikzlibrary{arrows.meta, positioning, fit, calc, backgrounds}
+
 
 % příkazy specifické pro tento dokument / specific commands for this document
 \newcommand{\argument}[1]{{\ttfamily\color{\tulcolor}#1}}
@@ -896,7 +880,7 @@ Senzor byl napájen z pinu 3V3. Napájení z 5\,V nebylo použito, protože výs
 \section{Haptická rukavice Remote Feelings}
 \label{sec:hapticka-rukavice}
 
-Rukavice Remote Feelings byla použita jako aktivní rozhraní na straně operátora \cite{Nezval2011}. Každý prst byl vybaven DC motorem z upraveného serva MG90S a H-můstkem A3909. Motor působil na lanko připojené k článkům prstu rukavice. Pohyb v jednom směru napomáhal zavírání prstu a pohyb v opačném směru napomáhal otevírání.
+Rukavice Remote Feelings byla použita jako aktivní rozhraní na straně operátora. Každý prst byl vybaven DC motorem z upraveného serva MG90S a H-můstkem A3909. Motor působil na lanko připojené k článkům prstu rukavice. Pohyb v jednom směru napomáhal zavírání prstu a pohyb v opačném směru napomáhal otevírání.
 
 Firmware ESP32 přiřazoval každému prstu stav asistence podle filtrované hodnoty FSR:
 

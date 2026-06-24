@@ -688,18 +688,326 @@ Rukavice, které aktivně generují odpor proti pohybu prstů uživatele (Kinest
 \cite{Safran2022} (návrh náramku s ESP32)
 \cite{Krycner2024} (návrh DPS pro haptickou rukavici s ESP32)
 
+% ============================================================
+%  NÁVRH KAPITOLY 5 — vygenerováno pro zpětnovazební systém
+%  Zdroj obsahu: zaverecna_zprava.tex (závěrečné zprávy projektu)
+%  Stav: DRAFT — určeno ke kontrole a doplnění citací / obrázků
+%  Není součástí repozitáře, jen lokalní soubor k revizi
+% ============================================================
+
 \chapter{Softwarové řešení a zpracování signálů}
 
-\section{Zpracování sEMG signálů}
-\cite{DeLuca2010} (De Lucovy standardy pro filtraci)
-\cite{Reaz2006}
-\cite{Chowdhury2013917}
+V implementovaném systému jsou použity tři hlavní způsoby převodu vstupních signálů na pohyb robotické ruky nebo na haptickou odezvu v rukavici.
+Prvním je přímé zrcadlení polohy prstů (mód \texttt{MIRROR}), druhým je řízení podle signálu sEMG a třetím je kontaktní detekce využívající proudové senzory INA219.
+Všechny tři způsoby využívají kalibraci, normalizaci, filtraci a hysterezní omezení, protože analogové signály jsou zatíženy šumem a mechanická soustava obsahuje vůle, tření a pružné prvky.
 
-\section{Algoritmus force feedbacku}
-\cite{Begalinova2020} (detekce prokluzu)
-\cite{Fang2022}
+Software systému je rozdělen do dvou samostatných projektů vyvíjených v prostředí PlatformIO (Arduino framework):
+\textit{Remote\_Feelings\_sEMG} pro ESP32 a \textit{InMoov\_BLE\_control} pro Arduino Uno.
+Sdílenou součástí obou projektů je hlavičkový soubor \texttt{telemetry.h} definující struktury binárních paketů; jakákoli změna v tomto souboru vyžaduje nahrání firmware do obou desek současně.
 
-\section{Implementace bezdrátového protokolu}
+
+% ─── 5.1 ────────────────────────────────────────────────────────────────────
+\section{Zpracování sEMG signálů a kalibrace}
+
+Zpracování sEMG signálu vychází z přístupu popsaného De Lucou \cite{DeLuca2010} a zahrnuje třífázový pipeline: kalibraci pro normalizaci signálu, filtraci pro potlačení šumu a výpočet aktivační proměnné s hysterezí.
+
+\subsection{Kalibrační protokol}
+
+Před každým použitím systému je nutné provést kalibraci spuštěnou příkazem \texttt{c} ze Serial Monitoru ESP32.
+Kalibrace probíhá ve dvou fázích:
+
+\begin{enumerate}
+    \item \textbf{Fáze 1 (klidová)}: uživatel drží ruku otevřenou po dobu \textasciitilde{}3\,s.
+    ESP32 průměruje hodnoty z každého FSR (\texttt{restForce[]}), hodnoty enkodérů (\texttt{fingerPosMin[]}) a minimální hodnotu sEMG (\texttt{emgMin}).
+    Zároveň funkce \texttt{ForceRange()} měří šum FSR a odvozuje z něj automatické mrtvé pásmo \texttt{DEADZONE[i]}.
+
+    \item \textbf{Fáze 2 (maximální stisk)}: uživatel 5\,s opakovaně svírá ruku v pěst.
+    ESP32 zaznamenává maximální hodnoty FSR (\texttt{clenchForce[]}), krajní polohy enkodérů (\texttt{fingerPosMax[]}) a maximum sEMG (\texttt{emgMax}).
+\end{enumerate}
+
+Z naměřených hodnot se odvodí EMG práh aktivace:
+\begin{equation}
+    \text{emgThreshold} = \text{emgMin} + 0{,}1 \cdot (\text{emgMax} - \text{emgMin})
+\end{equation}
+Hodnota 10\,\% od minima zajišťuje rychlou odezvu na záměrnou kontrakci, aniž by docházelo k falešným aktivacím v klidu \cite{Reaz2006}.
+
+\paragraph{}
+Po kalibraci ESP32 volitelně provede ověřovací pohyb (\texttt{verifyCalibrationMotion()}), při němž každý prst přejede do otevřené a zpět do zavřené polohy.
+Tento test ověřuje polaritu motorů a mechanické meze bez vizuální kontroly.
+Brzdění v blízkosti krajních poloh je realizováno kvadratickým zpomalením (kvadratická závislost PWM na vzdálenosti od cílové polohy), protože lineární brzdění bylo příliš agresivní a způsobovalo přestřelování.
+
+\subsection{Pipeline zpracování sEMG signálu}
+
+Syrový sEMG signál je z podstaty extrémně zarušený --- jeho spektrum obsahuje složky od 10\,Hz do 500\,Hz s náhodnými špičkami způsobenými pohybovými artefakty \cite{Chowdhury2013917}.
+Pro potlačení vysokofrekvenčního šumu je implementován digitální \textbf{exponenciální klouzavý průměr} (EMA, IIR low-pass filtr první řád):
+\begin{equation}
+    y_k = \alpha \cdot x_k + (1-\alpha) \cdot y_{k-1}
+\end{equation}
+Filtrační konstanta $\alpha = 0{,}08$ byla experimentálně zvolena pro prostředí C++ na ESP32 (frekvence smyčky \textasciitilde{}1\,kHz).
+Tato hodnota je výrazně nižší než hodnota $\alpha = 0{,}7$ používaná v původním MATLAB prototypu, protože vyšší frekvence smyčky mikrokontroléru vyžaduje agresivnější filtraci pro stejný efektní výsledek.
+
+\paragraph{}
+Dalším problémem je \textbf{přetočení filtru} při silné kontrakci: surový signál přesáhne \texttt{emgMax}, filtr se „přesytí" akumulovanou hodnotou a po uvolnění svalu trvá nežádoucí dobu, než filtrovaná hodnota klesne.
+Prsty tak zůstávají zavřeny i po uvolnění.
+Řešením je \textbf{saturace syrového signálu} před vstupem do filtru:
+\begin{equation}
+    x_k^{\text{sat}} = \min(x_k,\; 1{,}2 \cdot \text{emgMax})
+\end{equation}
+Filtr tak nikdy neakumuluje hodnotu vyšší než 120\,\% maxima a po uvolnění svalu se vrátí do klidové polohy bez zpoždění.
+
+\subsection{Hystereze a mrtvé pásmo pro řízení serv}
+
+Normalizovaná aktivační proměnná je definována jako:
+\begin{equation}
+    a = \mathrm{constrain}\!\left(
+        \frac{\mathrm{EMG}_{\mathrm{raw}} - \mathrm{EMG}_{\min}}
+             {\left|\mathrm{EMG}_{\max} - \mathrm{EMG}_{\min}\right|},\;
+        0,\; 1
+    \right)
+\end{equation}
+Jmenovatel je uveden v absolutní hodnotě, protože systém podporuje i \textbf{invertovaný průběh} sEMG signálu, kdy je hodnota při aktivaci nižší než hodnota v klidu; absolutní hodnota zajistí, že normalizace zůstane správně orientovaná bez přepisu kalibračního kódu.
+Pokud je absolutní rozdíl kalibračních hodnot $|\mathrm{EMG}_{\max} - \mathrm{EMG}_{\min}|$ příliš malý, systém aktivaci nevyhodnocuje, aby nedošlo k řízení způsobenému pouze šumem senzoru.
+Servo reaguje teprve tehdy, když $a_k$ překročí aktivační práh \texttt{EMG\_ACTIVATION\_THRESHOLD}; uvolní se, až klesne pod nižší práh \texttt{EMG\_RELEASE\_THRESHOLD}.
+Tato \textbf{hystereze} zabraňuje rychlému cvakání serva kolem jednoho prahu při fluktuujícím signálu v okolí meze aktivace.
+
+\paragraph{}
+Aby serva v klidu nevrčela a nehřála se (problém pozorovaný v standalone testování na Arduinu Uno), bylo zavedeno \textbf{mrtvé pásmo}: pod hodnotou \texttt{emgThreshold} se do serv nezapíše žádná hodnota.
+Stavová proměnná \texttt{isAtRest} zajišťuje, že přechod do klidové polohy (úhel 0$^\circ$) se provede jednorázově a následně se zápis do serva zastaví, čímž se eliminuje zbytečný proudový odběr motorků v klidu.
+
+
+% ─── 5.2 ────────────────────────────────────────────────────────────────────
+\section{Algoritmus detekce záměru pohybu a asistence}
+
+Záměr pohybu uživatele je detekován z FSR senzorů.
+Porovnáním filtrované FSR hodnoty s adaptivním mrtvým pásmem se pro každý prst určuje stav asistence:
+
+\begin{itemize}
+    \item Pokud filtrovaná síla FSR překročí \texttt{restForce[i] + DEADZONE[i]}, motor zahájí pohyb ve směru zavírání (\texttt{assistState = +1})
+    \item Pokud filtrovaná síla klesne pod \texttt{restForce[i] - DEADZONE[i]}, motor zahájí pohyb ve směru otevírání (\texttt{assistState = -1})
+    \item V opačném případě motor stojí (\texttt{assistState = 0})
+\end{itemize}
+
+\subsection{Releová regulace (relay control)}
+
+Jedinou aplikovanou metodou řízení motorů je \textbf{releová regulace} (bang-bang control): při nenulovém \texttt{assistState} dostane motor fixní PWM hodnotu \texttt{BANGBANG\_PWM} s odpovídajícím znaménkem \cite{TODO}.
+Tento přístup je imunní vůči šumu FSR, protože nevyžaduje přesné mapování síly na výkon --- pouze rozhodnutí přítomen/nepřítomen záměr pohybu.
+
+\paragraph{}
+Byly implementovány i proporcionální (P), PD a impedanční řídicí strategie jako \texttt{modeProp}, \texttt{modePD} a \texttt{modeImpedance}, avšak jejich odladění pro kompatibilitu s konkrétním hardwarem (různá mechanická tření prstů, nelinearita lanek) bylo natolik komplexní, že v rámci tohoto projektu nebyly nasazeny do provozu.
+Releová regulace byla vyhodnocena jako dostatečně robustní pro cílené použití \cite{GIUDICI2025}.
+
+\paragraph{}
+Z důvodu zajištění stability Bluetooth komunikace je řídicí smyčka motorů \textbf{time-slotted}: funkce \texttt{runBangBangIfDue()} spouští jeden krok řízení každých 20\,ms (\textasciitilde{}50\,Hz), přičemž mezi jednotlivými kroky probíhá obsluha Bluetooth zásobníku.
+Původní implementace s přímou smyčkou blokovala BT zásobník a způsobovala ztrátu paketů.
+
+\subsection{Pozicová omezení a polarita motorů}
+
+Každý prst má softwarové krajní polohy (\texttt{fingerPosMin[i]}, \texttt{fingerPosMax[i]}) z kalibrace.
+Funkce \texttt{isMotorAtPositionLimit()} detekuje dosažení krajní polohy z enkodéru a zastaví motor bez nutnosti hardwarových koncových spínačů.
+Prostředníček a ukazováček mají obrácené rozmezí enkodéru (\texttt{fingerPosMin > fingerPosMax}); tomu je přizpůsoben výpočet sémantického znaménka pohybu.
+Softwarové přehození pořadí pinů v poli \texttt{motorPins[]} v souboru \texttt{pin\_config.h} kompenzuje opačnou polaritu motorů těchto dvou prstů bez nutnosti fyzického přepojení vodičů.
+
+
+% ─── 5.3 ────────────────────────────────────────────────────────────────────
+\section{Implementace bezdrátového komunikačního protokolu}
+
+\subsection{Binární datové pakety}
+
+Přenos dat mezi ESP32 a Arduino Uno je realizován vlastním binárním protokolem definovaným v souboru \texttt{telemetry.h}.
+Použití binárního přenosu místo textového (CSV) snižuje objem přenášených dat a latenci; struktura \texttt{\_\_attribute\_\_((packed))} zajišťuje byte-level kompatibilitu mezi architekturami AVR (Uno, little-endian) a Xtensa (ESP32, little-endian).
+
+Protokol definuje dva typy paketů:
+\begin{itemize}
+    \item \textbf{EspToUnoPacket} (23 B): \texttt{start1} (0xAA), \texttt{start2} (0xBB), \texttt{servoAngles[5]} (cílové úhly 0--180$^\circ$), \texttt{emgRaw}, \texttt{emgMin}, \texttt{emgMax}, \texttt{emgThreshold} (16b int), \texttt{calibrated} (flag), \texttt{controlMode} (byte)
+    \item \textbf{UnoToEspPacket} (17 B): \texttt{start1} (0xAA), \texttt{start2} (0xBB), \texttt{servoAngles[5]} (aktuální polohy), \texttt{currents\_mA[5]} (odběry serv, 16b int)
+\end{itemize}
+Synchronizační bajty 0xAA, 0xBB umožňují detekci počátku paketu při ztrátě bajtů a přesynchronizaci přijímacího bufferů.
+Chybějí však ochrana CRC nebo XOR checksum; chybný paket může projít nepozorovaně --- implementace checksumu je doporučena pro budoucí verzi.
+
+\subsection{Zprovoznění Bluetooth spojení}
+
+ESP32 funguje jako \textbf{Bluetooth Master} a inicializuje spojení k HC-05 pomocí MAC adresy uložené v \texttt{hc05\_address[]} v \texttt{main.cpp}.
+MAC adresu HC-05 lze zjistit aplikací Serial Bluetooth Terminal na Androidu v záložce Bluetooth Classic.
+Úspěšné spárování se indikuje přechodem LED modulu HC-05 z rychlého blikání na pomalé dvojité blikání (\textasciitilde{}1$\times$ za 2\,s).
+
+\paragraph{}
+Komunikace probíhá jako asynchronní full-duplex; ESP32 odesílá EspToUnoPacket pravidelně každých \textasciitilde{}100\,ms a čte UnoToEspPacket kdykoli přijde.
+Arduino Uno odesílá UnoToEspPacket každých 20\,ms (v rytmu cyklu INA219 měření).
+
+\subsection{Stabilizace BT během kalibrace}
+
+Původní implementace kalibrace obsahovala blokující smyčky (čekání na vstup uživatele, akumulace vzorků), které na ESP32 přesahovaly \textasciitilde{}5\,s.
+FreeRTOS Idle task, který musí být pravidelně volán pro správnou funkci BT stacku a Task Watchdog Timer (TWDT), byl tím vyhlazován, což vedlo k resetu nebo výpadku BT spojení.
+
+Řešením je zavedení neblokující obsluhy pozadí:
+\begin{itemize}
+    \item \texttt{serviceBackgroundTasks()} --- volána periodicky uvnitř každé dlouhé smyčky; resetuje TWDT, zpracovává příchozí BT pakety a odesílá aktuální stav
+    \item \texttt{delayWithBackgroundTasks()} --- neblokující náhrada za standardní \texttt{delay()}
+    \item \texttt{waitForSerialInput()} --- čeká na uživatelský vstup bez zablokování BT stacku
+    \item \texttt{drainBluetoothBuffer()} --- po kalibraci vyprázdní BT buffer od nahromaděných starých dat
+\end{itemize}
+
+\paragraph{}
+Jako dodatečná ochrana bylo zavedeno potlačení interních debug výpisů Bluetooth knihovny přidáním do \texttt{platformio.ini}:
+\begin{lstlisting}
+build_flags = -DCORE_DEBUG_LEVEL=0
+\end{lstlisting}
+Bez tohoto nastavení se buffer terminálu i BT přijímací zásobník zahlcovaly hlášeními \texttt{[E][BluetoothSerial.cpp:342] RX Full!} při každém přeplnění bufferu v době blokující kalibrace.
+
+\paragraph{}
+Problém se zamrznutím systému v MIRROR módu (\texttt{q}) byl způsoben kaskádovým selháním: 5 serv robotické ruky najednou pod zátěží způsobilo proudový náraz, napájení serv kleslo, HC-05 ztratil napájení, BT spojení se přerušilo uprostřed volání \texttt{SerialBT.write()}, které má zdokumentovanou chybu --- při výpadku BT blokuje navždy a způsobí zaseknutí celé smyčky \texttt{loop()} na ESP32.
+Řešením je dedikovaný silový zdroj pro serva (min. 5\,A / 5--6\,V) oddělený od napájení elektroniky, a v budoucnu watchdog timer jako softwarová pojistka.
+
+\subsection{Překlad pohybových dat mezi dekami}
+
+ESP32 indexuje prsty 0 = malíček, 4 = palec; Arduino Uno v původním EMG skriptu používalo inverzní konvenci.
+Překladová tabulka \texttt{PACKET\_TO\_ESP\_FINGER[5] = \{4, 3, 2, 1, 0\}} zajišťuje správné mapování úhlů v EspToUnoPacket na příslušná serva Arduina Uno.
+
+\paragraph{}
+ESP32 rovněž přiděluje provozní mód:
+\begin{itemize}
+    \item \textbf{MIRROR (\texttt{q})}: ESP32 posílá polohu každého prstu z enkodéru přepočtenou na cílový úhel 0--180$^\circ$ pomocí funkce \texttt{fingerPositionToServoAngle()}; Uno pohybuje odpovídajícím servem robotické ruky
+    \item \textbf{EMG (\texttt{w})}: ESP32 posílá kalibrované hodnoty sEMG (emgRaw, emgMin, emgMax, emgThreshold); Uno normalizuje a filtruje signál a pohybuje všemi prsty robotické ruky proporcionálně k svalové aktivitě
+    \item \textbf{Asistence (\texttt{1})}: lokální mód na ESP32, nezávislý na výše uvedených; motory rukavice asistují pohybu prstů na základě FSR; může běžet souběžně s MIRROR i EMG
+\end{itemize}
+
+
+% ─── 5.4 ────────────────────────────────────────────────────────────────────
+\section{Firmware řídicí jednotky robotické ruky}
+
+Firmware \textit{InMoov\_BLE\_control} na Arduino Uno vykonává sekvenční smyčku s periodou \textasciitilde{}20\,ms, která střídá příjem paketů z HC-05, aktualizaci serv a vzorkování proudů INA219.
+
+\subsection{Příjem a parsování BT paketů}
+
+Arduino Uno poslouchá hardwarový Serial (9600 Bd) a vyhledává synchronizační sekvenci 0xAA, 0xBB.
+Po nalezení hlavičky přečte fixní počet bajtů odpovídající délce \texttt{EspToUnoPacket} a překopíruje je do struktury \texttt{\_\_attribute\_\_((packed))}.
+Po přijetí validního paketu se obnoví timeout-čítač; pokud nepříjde žádný paket po dobu \textasciitilde{}2\,s, Uno přejde do výchozího stavu \texttt{CONTROL\_MODE\_NONE} a serva se zastaví.
+
+\subsection{Řízení serv v MIRROR a EMG módech}
+
+ESP32 přepočítá analogovou hodnotu enkodéru na logický úhel pomocí kalibrované lineární normalizace:
+\begin{equation}
+    \theta =
+    \mathrm{constrain}\!\left(
+        \frac{x - x_{\min}}{x_{\max} - x_{\min}} \cdot 180,\;
+        0,\; 180
+    \right),
+\end{equation}
+kde $x$ je aktuální ADC hodnota enkodéru a $x_{\min}$, $x_{\max}$ jsou krajní polohy z kalibrace.
+Tento způsob kompenzuje různé mechanické rozsahy jednotlivých prstů a zajišťuje jednotný formát příkazu pro Arduino Uno.
+Každý prst má vlastní kalibrační hodnoty (\texttt{SERVO\_OPEN\_US[5]}, \texttt{SERVO\_CLOSED\_US[5]}), protože mechanické uložení serv a lanek není u všech prstů totožné.
+
+V MIRROR módu Uno přijatý cílový úhel $\theta$ přepočítá na šířku pulzu pro ServoTimer2:
+\begin{equation}
+    t_{\text{pulse}} = \mathrm{map}(\theta,\; 0,\; 180,\; 544,\; 2400) \quad [\mu\text{s}]
+\end{equation}
+kde 544\,$\mu$s odpovídá 0$^\circ$ a 2400\,$\mu$s odpovídá 180$^\circ$ dle standardu ServoTimer2.
+Výsledek je oříznut bezpečnostními mezemi \texttt{SERVO\_SAFE\_MIN\_US} a \texttt{SERVO\_SAFE\_MAX\_US} zabraňujícími mechanickému přetočení \cite{Krycner2024}.
+Pole \texttt{SERVO\_INVERTED[5] = \{false, false, false, false, true\}} ošetřuje mechanicky invertovaný malíček; pro tento prst se mapování otáčí.
+
+\paragraph{}
+V EMG módu Uno normalizuje příchozí sEMG hodnoty z ESP32 na aktivační proměnnou $a \in \langle 0, 1 \rangle$ a aplikuje lokální EMA filtr.
+Hystereze (práh aktivace / práh uvolnění) zabraňuje kmitání serva kolem meze aktivace.
+Výsledná aktivační hodnota je lineárně mapována na cílový úhel v rozsahu otevřeno--zavřeno pro \textbf{všechny prsty robotické ruky najednou}.
+Jeden kanál sEMG neumožňuje nezávislé ovládání jednotlivých prstů --- to je klíčovým omezením tohoto módu ve srovnání s módem MIRROR, kde každý prst sleduje odpovídající servo nezávisle.
+
+\subsection{Vzorkování proudů INA219 a detekce kontaktu}
+\label{sec:contact}
+
+Každý ze 5 senzorů INA219 je vzorkován každých 20\,ms.
+Proud ze serva není hladký DC --- H-můstek uvnitř serva jej moduluje a způsobuje impulzní šum.
+Zpracování probíhá v tomto pipeline:
+
+\begin{enumerate}
+    \item \textbf{Mediánové okno 5 vzorků} --- potlačení jednorázových proudových špiček
+    \item \textbf{EMA low-pass filtr} ($\alpha_{\text{proud}} = 0{,}18$) --- vyhlazení zbytkového šumu
+    \item \textbf{Absolutní hodnota} --- proud může téct oběma směry, relevantní je jeho velikost
+    \item \textbf{Adaptivní baseline} --- průběžné přizpůsobení pomalým mechanickým změnám (poloha serva, napnutí lanek, tření)
+\end{enumerate}
+
+Adaptivní baseline se aktualizuje asymetrickým exponenciálním filtrem:
+\begin{equation}
+    I_{\mathrm{baseline}} \;\leftarrow\;
+    I_{\mathrm{baseline}} + \alpha \cdot \left(I_{\mathrm{filt}} - I_{\mathrm{baseline}}\right),
+    \quad
+    \alpha =
+    \begin{cases}
+        \alpha_{\uparrow} = 0{,}025 & I_{\mathrm{filt}} > I_{\mathrm{baseline}} \\
+        \alpha_{\downarrow} = 0{,}12 & I_{\mathrm{filt}} \leq I_{\mathrm{baseline}}
+    \end{cases}
+\end{equation}
+Rychlejší pokles ($\alpha_\downarrow$) než nárůst ($\alpha_\uparrow$) zajistí, že pomalé mechanické změny jsou sledovány, ale prudké zvýšení proudu při kontaktu není okamžitě pohltí jako nová normální hladina.
+
+Kontakt se nevyhodnocuje z absolutního proudu, ale z \textbf{nadproudu} nad adaptivní baseline:
+\begin{equation}
+    I_{\mathrm{extra}} = \max\!\left(0,\; I_{\mathrm{filt}} - I_{\mathrm{baseline}}\right)
+\end{equation}
+Stavový automat per-prst vyžaduje:
+\begin{itemize}
+    \item $i_{\text{extra}}[i] > 450\,\text{mA}$ po dobu $\geq 3$ vzorků (\textasciitilde{}60\,ms) pro vstup do stavu kontaktu
+    \item Uvolnění: $I_{\mathrm{extra}} <$ 170\,mA po dobu $\geq 10$ vzorků (\textasciitilde{}200\,ms), \textbf{nebo} příchod povelu k otevření prstu --- v tom případě okamžitě bez čekání na release vzorky
+    \item Kontakt se vyhodnocuje pouze tehdy, pokud byl v posledních 350\,ms zaregistrován zavírací příkaz (\texttt{CONTACT\_CLOSING\_MEMORY\_MS}) --- zamezuje falešným detekcím při pasivním držení polohy
+\end{itemize}
+
+Intenzita kontaktu (0--255) je vypočtena normalizací nadproudu:
+\begin{equation}
+    \mathrm{intenzita} =
+    \mathrm{constrain}\!\left(
+        \frac{I_{\mathrm{extra}} - 170\,\mathrm{mA}}
+             {1400\,\mathrm{mA} - 170\,\mathrm{mA}},\;
+        0,\; 1
+    \right) \cdot 255
+\end{equation}
+kde spodní mez 170\,mA odpovídá uvolňovacímu prahu kontaktu a horní mez 1400\,mA přibližnému saturačnímu odběru serva.
+Výsledek je filtrován EMA filtrem ($\alpha = 0{,}35$) pro potlačení rychlých výkyvů a spolu s maskou aktivních kontaktů (\texttt{contactMask}) odeslán v \texttt{UnoToEspPacket} do ESP32.
+
+
+% ─── 5.5 ────────────────────────────────────────────────────────────────────
+\section{Algoritmus silové zpětné vazby}
+
+Po přijetí \texttt{UnoToEspPacket} s nenulovým \texttt{contactMask} zahájí ESP32 mód haptické stěny pro příslušné prsty \cite{Begalinova2020, Fang2022}.
+
+\subsection{Haptická stěna}
+
+V okamžiku prvního detekovaného kontaktu ESP32 uloží aktuální polohu enkodéru daného prstu jako \texttt{hapticWallPos[i]}.
+Dokud je kontakt aktivní, motor prstu v rukavici generuje \textbf{odpor proti dalšímu zavírání}: pokud uživatel tlačí prst dál (enkodér za \texttt{hapticWallPos[i]}), motor táhne prst zpět otevíráním.
+
+Výsledná PWM pro haptický odpor je mapována proporcionálně z intenzity kontaktu:
+\begin{equation}
+    \text{PWM}_{\text{haptic}} = \text{map}(\text{contactIntensity}[i],\; 0,\; 255,\; \text{PWM\_MIN},\; \text{PWM\_MAX})
+\end{equation}
+Tento přístup dává operátorovi hrubý vjem \textbf{tvrdosti objektu} --- tvrdý předmět (velký nadproud) vyvolá větší odpor, měkký předmět malý odpor.
+Pro přesnou texturu nebo frekvenci vibrací by bylo potřeba specializované vibrotaktilní buzení s vyšší šířkou pásma \cite{Fang2022}.
+
+\paragraph{}
+Kontaktní detekce má vyšší prioritu než asistence: pokud je detekován kontakt na prstu $i$, \texttt{driveSpeed[i]} je přepsán haptickým odporem a asistence se dočasně potlačí.
+Haptická stěna trvá maximálně 800\,ms od posledního platného paketu s aktivním kontaktem; bez obnovy automaticky zaniká (timeout), aby nedocházelo k trvalému zamrznutí prstu při výpadku BT.
+Deadband \texttt{HAPTIC\_WALL\_DEADBAND\_ADC = 35} zabraňuje vypadnutí haptického odporu při malém šumu enkodéru v okolí uložené polohy \texttt{hapticWallPos[i]}.
+
+\subsection{Tok dat end-to-end}
+
+Kompletní datový tok od fyzického kontaktu k haptické odezvě:
+\begin{enumerate}
+    \item Servo robotické ruky se dotýká objektu $\rightarrow$ proud serva vzroste
+    \item INA219 na Arduinu Uno změří proud; pipeline (medián, EMA, baseline) extrahuje nadproud
+    \item Stavový automat detekuje kontakt a vypočítá intenzitu 0--255
+    \item Arduino Uno odesílá \texttt{UnoToEspPacket} s \texttt{contactMask} a \texttt{contactIntensity[5]}
+    \item ESP32 přijme paket a uloží \texttt{hapticWallPos[i]}
+    \item Uživatel pokračuje v tlačení prstu $\rightarrow$ enkodér překročí \texttt{hapticWallPos[i]}
+    \item ESP32 zapne motor prstu PROTI pohybu uživatele; výkon odpovídá intenzitě kontaktu
+    \item Operátor vnímá odpor v rukavici jako silovou zpětnou vazbu
+\end{enumerate}
+
+
+% ─── TODO sekce ─────────────────────────────────────────────────────────────
+% Sekce k doplnění před finalizací:
+%  - obrázky: blokové schema systému, schéma zapojení HC-05 děliče,
+%    foto rukavice, foto robotické ruky, screenshot Serial Monitoru
+%  - doměření: latence BT spojení (empiricky), přesnost kontaktní detekce,
+%    srovnání s prahovou hodnotou z literatury (Begalinova2020, Fang2022)
+%  - citace: InMoov (původní projekt), EECS249_HapticGlove hack návod,
+%    ESP32 Arduino core dokumentace, INA219 datasheet
+% ─────────────────────────────────────────────────────────────────────────────
 
 \chapter{Experimentální testování a výsledky}
 \label{chap:experimentalni-testovani}

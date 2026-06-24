@@ -1,0 +1,78 @@
+% Diagram aktivni asistence pohybu prstu v Remote Feelings.
+% V preambuli hlavniho dokumentu je potreba:
+% \usepackage{tikz}
+% \usetikzlibrary{arrows.meta, positioning, calc}
+% \usepackage{float}
+
+\begin{figure}[H]
+    \centering
+    \noindent\makebox[\linewidth][c]{%
+    \resizebox{0.98\linewidth}{!}{%
+    \begin{tikzpicture}[
+        font=\normalsize,
+        node distance=22mm and 18mm,
+        block/.style={
+            draw,
+            rounded corners=2mm,
+            align=center,
+            minimum width=31mm,
+            minimum height=14mm,
+            fill=gray!8
+        },
+        controller/.style={block, fill=blue!10, thick},
+        sensor/.style={block, fill=green!10},
+        actuator/.style={block, fill=orange!14},
+        person/.style={block, fill=yellow!18},
+        arrow/.style={
+            -{Latex[length=3mm]},
+            thick
+        },
+        feedbackarrow/.style={
+            -{Latex[length=3mm]},
+            thick,
+            dashed,
+            color=gray!70
+        },
+        labelabove/.style={
+            midway, above=4mm,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        },
+        labelbelow/.style={
+            midway, below=4mm,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        },
+        labeltext/.style={
+            midway,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        }
+    ]
+
+    \node[person] (human) {Lidská\\ruka};
+    \node[block, right=of human] (mechanics) {Mechanika\\R.F.};
+    \node[sensor, right=of mechanics] (fsr) {FSR\\senzory};
+    \node[controller, right=of fsr] (esp) {ESP32-DevKitC V4};
+    \node[actuator, right=of esp] (servos) {Servomotory\\R.F.};
+
+    \draw[arrow] (human) to[bend left=12] node[labelabove] {pohyb\\prstů} (mechanics);
+    \draw[arrow] (mechanics) -- node[labelabove] {tlak\\na FSR} (fsr);
+    \draw[arrow] (fsr) -- node[labelabove] {záměr\\pohybu} (esp);
+    \draw[arrow] (esp) -- node[labelabove] {PWM} (servos);
+    \draw[arrow] (servos.south) -- ++(0,-18mm)
+        -| node[labelbelow, pos=0.25] {asistenční\\síla} (mechanics.south);
+    \draw[arrow] (mechanics) to[bend left=12] node[labelbelow] {podpora\\pohybu} (human);
+
+    \end{tikzpicture}
+    }%
+    }
+    \caption{Tok signálů při aktivní asistenci pohybu prstů v rukavici Remote Feelings.}
+    \label{fig:remote-feelings-aktivni-asistence}
+\end{figure}

@@ -1,0 +1,86 @@
+% Diagram toku signalu pro Remote Feelings v rezimu MIRROR.
+% V preambuli hlavniho dokumentu je potreba:
+% \usepackage{tikz}
+% \usetikzlibrary{arrows.meta, positioning, calc}
+% \usepackage{float}
+
+\begin{figure}[H]
+    \centering
+    \noindent\makebox[\linewidth][c]{%
+    \resizebox{0.98\linewidth}{!}{%
+    \begin{tikzpicture}[
+        font=\normalsize,
+        node distance=22mm and 18mm,
+        block/.style={
+            draw,
+            rounded corners=2mm,
+            align=center,
+            minimum width=31mm,
+            minimum height=14mm,
+            fill=gray!8
+        },
+        controller/.style={block, fill=blue!10, thick},
+        actuator/.style={block, fill=orange!14},
+        person/.style={block, fill=yellow!18},
+        bt/.style={block, fill=cyan!10, dashed},
+        arrow/.style={
+            -{Latex[length=3mm]},
+            thick
+        },
+        feedbackarrow/.style={
+            -{Latex[length=3mm]},
+            thick,
+            dashed,
+            color=gray!70
+        },
+        labelabove/.style={
+            midway, above=4mm,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        },
+        labelbelow/.style={
+            midway, below=4mm,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        },
+        labeltext/.style={
+            midway,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        }
+    ]
+
+    \node[person] (human) {Lidská\\ruka};
+    \node[block, right=of human] (mechanics) {Mechanika\\R.F.};
+    \node[actuator, right=of mechanics] (servos) {Servomotory\\R.F.};
+    \node[controller, right=of servos] (esp) {ESP32-DevKitC V4};
+    \node[bt, right=of esp] (btout) {Bluetooth\\do InMoov};
+
+    \node[bt, below=28mm of btout] (btin) {Bluetooth\\z InMoov};
+
+    \draw[arrow] (human) to[bend left=12] node[labelabove] {pohyb\\prstů} (mechanics);
+    \draw[arrow] (mechanics) to[bend left=12] node[labelabove] {poloha\\prstů} (servos);
+    \draw[arrow] (servos) to[bend left=12] node[labelabove] {stav\\rukavice} (esp);
+    \draw[arrow] (esp) -- node[labelabove] {cílové polohy\\pro InMoov} (btout);
+
+    \draw[arrow] (btin.west) -- ++(-8mm,0)
+        |- node[labeltext, right=2mm, pos=0.3]{kontakt\\a intenzita} (esp.south east);
+    \draw[arrow] (esp) to[bend left=12] node[labelbelow] {PWM\\odezvy} (servos);
+    \draw[arrow] (servos) to[bend left=12] node[labelbelow] {protitah\\motorů} (mechanics);
+    \draw[arrow] (mechanics) to[bend left=12] node[labelbelow] {haptický\\odpor} (human);
+
+    \draw[feedbackarrow] (btout.east) -- ++(12mm,0mm)
+        |- node[labeltext, right=2mm, pos=0.3] {systém\\InMoov} (btin.east);
+
+    \end{tikzpicture}
+    }%
+    }
+    \caption{Tok signálů v systému Remote Feelings při režimu MIRROR.}
+    \label{fig:remote-feelings-mirror}
+\end{figure}

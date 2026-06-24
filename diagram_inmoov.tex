@@ -1,0 +1,93 @@
+% Diagram toku signalu pro system InMoov.
+% V preambuli hlavniho dokumentu je potreba:
+% \usepackage{tikz}
+% \usetikzlibrary{arrows.meta, positioning, calc}
+% \usepackage{float}
+
+\begin{figure}[H]
+    \centering
+    \noindent\makebox[\linewidth][c]{%
+    \resizebox{0.98\linewidth}{!}{%
+    \begin{tikzpicture}[
+        font=\normalsize,
+        node distance=22mm and 18mm,
+        block/.style={
+            draw,
+            rounded corners=2mm,
+            align=center,
+            minimum width=31mm,
+            minimum height=14mm,
+            fill=gray!8
+        },
+        controller/.style={block, fill=blue!10, thick},
+        sensor/.style={block, fill=green!10},
+        actuator/.style={block, fill=orange!14},
+        object/.style={block, fill=yellow!18},
+        bt/.style={block, fill=cyan!10, dashed},
+        arrow/.style={
+            -{Latex[length=3mm]},
+            thick
+        },
+        feedbackarrow/.style={
+            -{Latex[length=3mm]},
+            thick,
+            dashed,
+            color=gray!70
+        },
+        labelabove/.style={
+            midway, above=4mm,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        },
+        labelbelow/.style={
+            midway, below=4mm,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        },
+        labeltext/.style={
+            midway,
+            font=\small,
+            fill=white, inner sep=2pt,
+            text=black,
+            align=center
+        }
+    ]
+
+    \node[bt] (btin) {Bluetooth\\z R.F.};
+    \node[bt, right=of btin] (hc05) {HC-05};
+    \node[controller, right=of hc05] (uno) {Arduino\\UNO};
+    \node[actuator, right=of uno] (servos) {Servomotory\\InMoov};
+    \node[block, right=of servos] (mech) {Mechanika\\InMoov};
+    \node[object, right=of mech] (obj) {Držený\\předmět};
+
+    \node[sensor, below=40mm of servos] (ina) {Senzory\\INA219};
+    \node[bt, below=46mm of btin] (btout) {Bluetooth\\do ESP32};
+
+    \draw[arrow] (btin) -- node[labelabove]{řídicí\\paket} (hc05);
+    \draw[arrow] (hc05) to[bend left=12] node[labelabove]{UART} (uno);
+    \draw[arrow] (uno) -- node[labelabove]{servo\\pulzy} (servos);
+    \draw[arrow] (servos) to[bend left=12] node[labelabove]{tah lanek} (mech);
+    \draw[arrow] (mech) to[bend left=12] node[labelabove]{úchop} (obj);
+
+    \draw[arrow] (obj) to[bend left=12] node[labelbelow]{reakce objektu}(mech);
+    \draw[arrow] (mech) to[bend left=12] node[labelbelow]{mechanická\\zátěž} (servos);
+
+    \draw[arrow] (servos.south) -- node[labeltext, right=2mm]{odběr\\proudu} (ina.north);
+    \draw[arrow] (ina.west) -- ++(-18mm,0)
+        -| node[labelbelow, pos=0.22]{proud} (uno.south);
+
+    \draw[arrow] (uno) to[bend left=12]
+        node[labelbelow]{kontakt\\a intenzita} (hc05);
+    \draw[arrow] (hc05.south) -- ++ (0,-46mm)
+        |- node[labelbelow, pos=0.22]{UART / BT} (btout.east);
+
+    \end{tikzpicture}
+    }%
+    }
+    \caption{Tok signálů v systému robotické ruky InMoov.}
+    \label{fig:inmoov-tok-signalu}
+\end{figure}

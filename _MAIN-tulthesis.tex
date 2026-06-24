@@ -663,6 +663,22 @@ Navržený systém byl koncipován jako bilaterální teleoperační řetězec v
 
 Systém byl rozdělen do dvou fyzicky oddělených subsystémů propojených bezdrátovým spojem Bluetooth Classic. Subsystém rukavice byl řízen deskou ESP32-DevKitC V4 32U. Subsystém robotické ruky byl řízen deskou Arduino UNO, ke které byl připojen modul HC-05. Komunikace byla navržena jako asynchronní full-duplex spojení s binárně kódovanými pakety. Textový formát dat nebyl použit, protože by zvyšoval objem přenášených dat a latenci komunikačního řetězce \cite{Wu2024613}.
 
+Reálné provedení obou částí systému je zachyceno na obr.~\ref{fig:real-rukavice} a obr.~\ref{fig:real-inmoov}. Fotografie doplňují bloková schémata a ukazují fyzické uspořádání rukavice Remote Feelings, robotické ruky InMoov, řídicích jednotek a připojených periferií.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{Rukavice.jpg}
+\caption{Realizovaná haptická rukavice Remote Feelings se senzorem sEMG.}
+\label{fig:real-rukavice}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{Ruka.jpg}
+\caption{Realizovaná robotická ruka InMoov s řídicí elektronikou a výkonovým zdrojem.}
+\label{fig:real-inmoov}
+\end{figure}
+
 V realizované sestavě byly použity tyto hlavní části:
 
 \begin{itemize}
@@ -675,6 +691,16 @@ V realizované sestavě byly použity tyto hlavní části:
     \item \textbf{potenciometry, H-můstky a DC motory z upravených serv MG90S} -- prvky použité pro snímání polohy prstů a aktivní odpor v rukavici,
     \item \textbf{senzor MyoWare 1.0} -- analogový senzor povrchové elektromyografie pro doplňkové řízení robotické ruky signálem sEMG\@.
 \end{itemize}
+
+Blokové schéma subsystému robotické ruky InMoov je uvedeno na obr.~\ref{fig:inmoov-tok-signalu}. Tok signálů v rukavici Remote Feelings je rozdělen podle způsobu řízení a lokální asistence: režim MIRROR ukazuje obr.~\ref{fig:remote-feelings-mirror}, režim EMG obr.~\ref{fig:remote-feelings-emg} a aktivní asistenci pohybu prstů obr.~\ref{fig:remote-feelings-aktivni-asistence}.
+
+\input{diagram_inmoov.tex}
+
+\input{diagram_remote_feelings_mirror.tex}
+
+\input{diagram_remote_feelings_emg.tex}
+
+\input{diagram_remote_feelings_aktivni_asistence.tex}
 
 Přenos dat byl realizován oběma směry. Z ESP32 do Arduino UNO byly odesílány cílové úhly servomotorů, hodnoty sEMG a zvolený režim řízení. Z Arduino UNO do ESP32 byly odesílány aktuální polohy serv, filtrované proudy, bitová maska kontaktu a intenzity kontaktu. Synchronizace paketů byla provedena dvojicí hlavičkových bajtů \texttt{0xAA} a \texttt{0xBB}. Struktury paketů byly sdíleny v hlavičkovém souboru \texttt{telemetry.h}, který musel být udržován identicky ve firmware obou mikrokontrolérů.
 
@@ -728,7 +754,7 @@ Schématicky lze celý řetězec popsat následovně:
     \item v rukavici byla podle kontaktové informace aktivována haptická stěna.
 \end{enumerate}
 
-Do výstupního souboru nebyly vloženy externí příkazy typu \texttt{\textbackslash input}, protože by vyžadovaly doplňkové soubory a balíčky TikZ, které nejsou v hlavním souboru práce načteny. Pro vložení grafických schémat lze v další fázi použít samostatné obrázky nebo diagramy až po doplnění potřebných balíčků do preambule hlavního dokumentu.
+Na tento slovní popis navazují bloková schémata zařazená v části~\ref{sec:celkova-architektura}, která odděleně ukazují tok signálů v robotické ruce InMoov, v režimu MIRROR, v režimu EMG a při aktivní asistenci pohybu prstů.
 
 \section{Přehled zapojení a pinout}
 \label{sec:pinout}

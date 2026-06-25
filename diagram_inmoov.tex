@@ -65,7 +65,7 @@
     \node[object, right=of mech] (obj) {Držený\\předmět};
 
     \node[sensor, below=40mm of servos] (ina) {Senzory\\INA219};
-    \node[bt, below=46mm of btin] (btout) {Bluetooth\\do ESP32};
+    \node[bt, below=46mm of btin] (btout) {Bluetooth\\do R. F.};
 
     \draw[arrow] (btin) -- node[labelabove]{řídicí\\paket} (hc05);
     \draw[arrow] (hc05) to[bend left=12] node[labelabove]{UART} (uno);
@@ -83,7 +83,7 @@
     \draw[arrow] (uno) to[bend left=12]
         node[labelbelow]{kontakt\\a intenzita} (hc05);
     \draw[arrow] (hc05.south) -- ++ (0,-46mm)
-        |- node[labelbelow, pos=0.22]{UART / BT} (btout.east);
+        |- node[labelbelow, pos=0.32]{UART / BT} (btout.east);
 
     \end{tikzpicture}
     }%

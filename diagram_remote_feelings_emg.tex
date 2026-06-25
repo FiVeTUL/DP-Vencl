@@ -70,8 +70,7 @@
     \draw[arrow] (emg) -- node[labelabove]{raw sEMG} (esp);
     \draw[arrow] (esp) -- node[labelabove]{EMG data} (btout);
 
-    \draw[feedbackarrow] (btout.east) -- ++(12mm,0)
-        |- node[labeltext, right=2mm, pos=0.3]{systém\\InMoov} (btin.east);
+
 
     \draw[arrow] (btin.west) -- ++(-8mm,0)
         |- node[labeltext, right=2mm, pos=0.25]{kontakt\\a intenzita} (esp.south east);

@@ -428,8 +428,10 @@ from a breach of this declaration.
 {\section*{Pod\v ekov\'an\'{\i}}}}{}
 
 \newenvironment{abbrList}{\phantomsection\ifthenelse{\equal{\TUL@nguage}{EN}}%
-{\section*{List of abbreviations}\addcontentsline{toc}{section}{List of abbreviations}}%
-{\section*{Seznam zkratek}\addcontentsline{toc}{section}{Seznam zkratek}}
+{\section*{List of abbreviations}%\addcontentsline{toc}{section}{List of abbreviations}
+}%
+{\section*{Seznam zkratek}%\addcontentsline{toc}{section}{Seznam zkratek}
+}
 \DefTblrTemplate{contfoot-text}{default}{}
 \DefTblrTemplate{conthead-text}{default}{}
 \DefTblrTemplate{caption}{default}{}

@@ -1,0 +1,119 @@
+\chapter{Analýza současného stavu}
+
+\section{Robotické a protetické modely rukou}
+
+\subsubsection{Open-source a DIY projekty}
+Tyto projekty se zaměřují na nízkonákladová řešení, často využívající technologii 3D tisku:
+
+\begin{itemize}
+    \item \textbf{HACKberry} – Japonský projekt společnosti exiii, který využívá Arduino Micro a 3D tisk. Předchozí verze tohoto projektu byly známy pod názvy \textit{Handii} a \textit{Coyote}.
+    \item \textbf{InMoov} – Rozsáhlý open-source projekt humanoidního robota v životní velikosti, jehož ruka a předloktí jsou často využívány pro protetický výzkum.
+    \item \textbf{Open Bionics} – Britská společnost vyvíjející několik modelů:
+    \begin{itemize}
+        \item \textbf{Ada / Ada Hand (v1.0, v1.1)} – Levná bionická ruka určená k vlastní montáži.
+        \item \textbf{Brunel Hand} – Robotická ruka určená pro experimentální účely.
+    \end{itemize}
+    \item \textbf{e-NABLE} – Komunitní projekt zaměřený na mechanické tahové protézy, zahrnující modely:
+    \begin{itemize}
+        \item \textbf{Flexy-Hand 2 (od Gyrobot)} – Tahová protéza s flexibilními klouby.
+        \item \textbf{Phoenix V2} – Model využívající k pohybu dentální gumičky.
+    \end{itemize}
+    \item \textbf{Youbionic / You Bionic} – Projekt zaměřený na vývoj bionických rukou tištěných na 3D tiskárně.
+    \item \textbf{MyoTriton} – Běloruský DIY projekt aktivní elektrické protézy.
+    \item \textbf{SSSA-MyHand} – Projekt lehké a obratné myoelektrické ruky.
+\end{itemize}
+
+\subsubsection{Výzkumné a laboratorní prototypy}
+Robotické ruce používané k testování algoritmů a teleoperace:
+
+\begin{itemize}
+    \item \textbf{Shadow Hand} – Vysoce komplexní robotická ruka používaná pro výzkum obratné manipulace.
+    \item \textbf{LEAP Hand} – Nízkonákladová, efektivní antropomorfní ruka pro robotické učení.
+    \item \textbf{Allegro Hand} – Čtyřprstá robotická ruka využívaná pro teleoperaci.
+    \item \textbf{DLR-HIT II} – Robotická ruka vyvinutá ve spolupráci s DLR, pro kterou byl vyvinut systém řízení pomocí Leap Motion.
+    \item \textbf{Schunk S5FH} – Podmíněně ovládaná antropomorfní ruka využívaná při sledování pohybu lidské ruky.
+    \item \textbf{RoboRay hand} – Vysoce ovladatelná robotická ruka s bezsenzorovým měřením kontaktní síly.
+    \item \textbf{AISRA} – Antropomorfní robotická ruka pro průmyslové aplikace malého měřítka.
+    \item \textbf{BCL-13} – Humanoidní soft-robotická ruka.
+    \item \textbf{UC Softhand} – Lehká adaptivní bionická ruka s pohonem pomocí kroucených strun.
+\end{itemize}
+
+\subsubsection{Komerční produkty}
+Pokročilé bionické náhrady s vysokou technologickou úrovní:
+
+\begin{itemize}
+    \item \textbf{Bebionic} (původně RSLSteeper, nyní Ottobock) – Myoelektrická protéza se samostatnými motory pro každý prst.
+    \item \textbf{Michelangelo (Ottobock)} – Pokročilá ruka s vysoce flexibilním zápěstím a aktivně poháněným palcem, ukazovákem a prostředníkem.7
+    \item \textbf{Allegro Hand} - Čtyřprsté modely \textit{V4} a \textit{V5 Plus} nabízí 16 DoF a novější model \textit{V5 Plus} navíc obsahuje 360° pneumatické taktilní senzory v bříšcích prstů
+    \item \textbf{i-limb (Touch Bionics)} – Produktová řada zahrnující modely \textit{i-limb quantum}, \textit{i-limb Ultra} a \textit{i-digits quantum} (pro částečné amputace dlaně).
+    \item \textbf{Vincent evolution (Vincent Systems)} – Německé protézy zahrnující verze \textit{Vincent evolution 2}, \textit{3} a model pro mládež \textit{VINCENTyoung}.
+    \item \textbf{Hero Arm (Open Bionics)} – První certifikovaná bionická ruka z 3D tisku na světě.
+    \item \textbf{Stradivary (Motorica)} – Ruská myoelektrická protéza vybavená například bezkontaktním platebním systémem.
+    \item \textbf{Cybi (Motorica)} – Aktivní tahová protéza určená primárně pro děti.
+    \item \textbf{Luke Arm (Mobius Bionics)} – Pokročilá bionická paže ovládaná myslí.
+    \item \textbf{SensorHand Speed (Ottobock)} – Myoelektrická ruka s rychlou odezvou.
+    \item \textbf{Electrohand 2000 (Ottobock)} – Řešení určené pro děti.
+\end{itemize}
+
+
+
+
+\cite{Najman2017}
+\cite{Koprnicky2017cz}
+\cite{Koprnicky2017eng}
+\cite{Koprnicky2018}
+\cite{Koprnicky2019}
+
+\cite{ENABLEFuture}
+\cite{ExiiiHACKberry}
+\cite{LimbitlessSolutions}
+
+\section{Rukavice se silovou či haptickou zpětnou vazbou}
+V následujícím seznamu jsou uvedeny rukavice, které aktivně generují odpor proti pohybu prstů uživatele (Kinesthetic Force Feedback) nebo simulují pocit hmatu  či  jiné smyslové vjemy.
+
+
+\begin{itemize}
+    \item \textbf{Remote Feelings} – Open-source projekt nízkonákladové haptické rukavice vyvinuté na Kalifornské univerzitě v Berkeley skupinou Xinying Hu, Aymeric Wang a Adam Curtis. Tato práce z tohoto projektu vychází.
+    \item \textbf{DOGlove} – Open-source haptická rukavice, jiný, lankový, princip převodu síly
+    \item \textbf{HGlove (též Leader HGlove)} – Nositelný exoskeleton od firmy Haption poskytující silovou zpětnou vazbu až 5~N na prst, využívaný např. i pro řízení robotické ruky Allegro. Nezaměňovat s \textit{HGLOVE} od \textit{IREROBOT}, která poskytuje haptickou zpětnou vazbu, nikoliv silovou
+    \item \textbf{SenseGlove (včetně modelu SenseGlove Nova)} – Komerční exoskeleton se silovou odezvou používaný v teleoperačních systémech a VR.
+    \item \textbf{HaptX (včetně modelu HaptX G1)} – Systém využívající mikrofluidní technologii pro simulaci tlaku a odporu.
+    \item \textbf{Teslaglove} – Rukavice vizuálně prezentovaná v souvislosti s robotickými technologiemi společnosti Tesla.
+    \item \textbf{Dexmo (od Dexta Robotics)} – Exoskeleton poskytující mechanický odpor prstům, zobrazený v sekci podvazbené silové vazby.
+    \item \textbf{DextrES} – Zařízení využívající technologii elektrostatických lineárních brzd pro simulaci tuhosti virtuálních objektů.
+    \item \textbf{SAFE (Sensing and Force-feedback Exoskeleton) Robotic Glove} – Robotická rukavice navržená pro obousměrné snímání a silovou odezvu.
+    \item \textbf{Rutgers Master II} – Výzkumný projekt silově-zpětnovazební rukavice.
+    \item \textbf{Hand exoskeleton (Ferguson et al.)} – Exoskeleton využívající admitanční řízení k poskytování haptické odezvy.
+    \item \textbf{LucidGloves (dříve Lucid VR)} – Rukavice pro přesné sledování polohy prstů (tracking), která může být doplněna o podvazbenou silovou vazbu.
+    \item \textbf{Manus (včetně modelů Manus Prime II a Manus Meta)} – Komerční rukavice pro sledování pohybu, často využívané v kombinaci s vibrotaktilními moduly.
+    \item \textbf{SEM Glove (Soft Extra Muscle / Iron Hand)} – Měkká rukavice od BioServo Technologies pro posílení úchopu s integrovanými senzory tlaku a síly.
+    \item \textbf{Exo-Glove Poly / Poly II} – Nositelný robotický systém na bázi polymerů využívající lankové převody pro asistenci úchopu.
+    \item \textbf{CyberTouch} – Datová rukavice vybavená vibrotaktilními aktuátory na prstech pro hmatovou odezvu.
+    \item \textbf{HI5 VR Glove} – Bezdrátový systém snímání pohybu ruky s vibrační haptikou.
+    \item \textbf{FEX (Fingers Extending eXoskeleton)} – Rehabilitační exoskeleton určený k natahování prstů se senzory síly.
+    \item \textbf{Hand of Hope} – Zařízení pro rehabilitaci ruky po mrtvici.
+    \item \textbf{NeoMano} – Wearable robotický systém pro pomoc s úchopem.
+    \item \textbf{ForceGlove} – Softwarová knihovna a prototyp vibrotaktilní rukavice vyvinuté pro hmatovou interakci v 3D prostředí.
+    \item \textbf{SPETH (Self-Powered Electrotactile Textile Haptic)} – Textilní rukavice s vlastním napájením využívající triboelektrické generátory pro elektrickou stimulaci kůže.
+    \item \textbf{ExoK’ab} – Haptický exoskeleton dlaně a prstů s 6 stupni volnosti určený k rehabilitaci.
+    \item \textbf{Vibroglove} – Asistivní technologie přenášející vibrační signály (např. výrazy tváře) na ruku uživatele.
+    \item \textbf{i-force glove} – Rukavice se senzory pro měření distribuce sil při lidském úchopu.
+    \item \textbf{Tactile gloves for Robonaut} – Systém vyvinutý NASA/DARPA pro autonomní úchop robotů.
+    \item \textbf{Power Glove (Nintendo)} – Historické zařízení snímající ohnutí prstů pomocí rezistivních proužků.
+\end{itemize}
+\cite{Belcamino2024} (komplexní srovnání 30 rukavic)
+\cite{Krycner2024} (rozbor LucidGloves a Remote Feelings)
+\cite{Nezval2011}
+\cite{Zhang2025}
+\cite{GIUDICI2025}
+\cite{Giudici2024}
+\cite{Li2025}
+
+\section{Metody řízení a zpětné vazby}
+\cite{Song2023823}
+\cite{Tchimino2022920}
+\cite{Trajlinek2021} (přehled metod zpětné vazby)
+\cite{Sul2025627}
+\cite{Ninu2014}
+\cite{Dutta2002}
+\cite{Xiong2024}
